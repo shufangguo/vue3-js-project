@@ -1,0 +1,31 @@
+name: Docker Image CI # Actions名称
+on: [push] # 执行时机
+jobs:
+
+# 这里我使用的是yarn，想用npm的同学将yarn命令修改为npm命令即可
+build:
+runs-on: ubuntu-latest
+steps:
+- name: checkout
+uses: actions/checkout@main
+# 安装依赖
+- name: install
+run: npm install
+# 打包
+- name: build project
+run: npm run build
+
+# 打包镜像推送到阿里云容器镜像服务
+- name: Build the Docker image
+run: |
+docker login --username=${{ secrets.DOCKER_USERNAME }} registry.cn-hangzhou.aliyuncs.com --password=${{ secrets.DOCKER_PASSWORD }}
+docker build -t bilibili-vue:latest .
+docker tag vue3-js-project registry.cn-hangzhou.aliyuncs.com/guoshufang0518/vue3-js-project:latest
+docker push registry.cn-hangzhou.aliyuncs.com/guoshufang0518/vue3-js-project:latest # 推送
+- name: ssh docker login # 使用appleboy/ssh-action@master登录服务器执行拉取镜像脚本，服务器ip、用户名、密码配置方式同容器镜像服务配置方式一样
+uses: appleboy/ssh-action@master
+with:
+        host: ${{ secrets.SSH_HOST }} 
+username: ${{ secrets.SSH_USERNAME }}
+password: ${{ secrets.SSH_PASSWORD }}
+script: cd ~ && sh bilibili-vue-deploy.sh ${{ secrets.DOCKER_USERNAME }} ${{ secrets.DOCKER_PASSWORD }}
